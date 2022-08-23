@@ -41,6 +41,7 @@ Route::get('/customer/profile', [CustomerController::class, 'customerProfile'])-
 
 //edit profile
 Route::get('/customer/profile/edit/{id}',[CustomerController::class,'customerProfileEdit'])->name('customer.profile.edit')->middleware('customerAuthorized');
+
 Route::post('/customer/profile/edit',[CustomerController::class,'customerProfileEditSubmit'])->name('customer.profile.edit.submit')->middleware('customerAuthorized');
 
 

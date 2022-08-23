@@ -7,6 +7,7 @@ use App\Models\manager;
 use App\Models\Category;
 use App\Models\Room;
 use App\Models\Notice;
+use Illuminate\Support\Facades\Validator;
 
 use Session;
 
@@ -18,7 +19,7 @@ class ManagerController extends Controller
     
     public function loginsubmit(Request $req)
     {
-        $this->validate($req,
+        $validator = Validator::make($req->all(),
             [
                 'username'=>'required|regex:/^[A-Z a-z]+$/',
                 'password'=>'required|min:4',
@@ -29,16 +30,16 @@ class ManagerController extends Controller
                 'password.min'=>'Atleast 4 characters required'
             ]
         );
+        if($validator->fails()){
+            return response()->json(["status"=>422, "msg"=>"Input values are not correct!"]);
+        }
+
         $manager = manager::where('username', $req->username)->where('password', $req->password)->first();
         
         if($manager){
-            session()->put('logged_name', $manager->name);
-            session()->put('logged_username', $manager->username);
-            session()->put('logged_password', $manager->password);
-            return redirect()->route('manager.panel');
+            return response()->json(["status"=>200, "msg"=>"Successfully login"]);
         }
-
-        return redirect()->route('manager.login.submit');
+        return response()->json(["status"=>422, "msg"=>"Invalid Username or Password!"]);
     }
 
     public function managerDashboard(){
@@ -55,39 +56,14 @@ class ManagerController extends Controller
     //     return view('/manager/addcategory');
     // } 
 
-    public function addCategory(Request $req)
-    {
-        // $this->validate($req,
-        //     [
-        //         'name' => 'required',
-        //         'price' => 'required',
-        //         'qty' => 'required',
-        //         'description' => 'required',
-        //     ],
-        //     [
-        //         'name.required' => 'Please provide category name',
-        //         'price.required' => 'Please provide category price',
-        //         'qty.required' => 'Please provide the number of bed',
-        //         'description.required' => 'Please provide category description',
-        //     ]
-        // );
-
-        $category = new Category();
-        $category->name = $req->name;
-        $category->price = $req->price;
-        $category->qty = $req->qty;
-        $category->description = $req->description;
-        if($category->save()){
-            return response()->json(["msg"=>"Added Successfully"]);
-        }
-        return response()->json(["msg"=>"Unsuccessfull"]);
-        //return redirect()->route('manager.panel');
-        
+    public function editCategoryInfo($id){
+        $data = Category::where('id', $id)->first();
+        return response()->json($data);
     }
 
-    public function addCategorySubmit(Request $req)
+    public function editCategorySubmit(Request $req)
     {
-        $this->validate($req,
+        $validator = Validator::make($req->all(),
             [
                 'name' => 'required',
                 'price' => 'required',
@@ -102,117 +78,191 @@ class ManagerController extends Controller
             ]
         );
 
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
+
+        $category = Category::where('id', $req->id)->first();
+        $category->name = $req->name;
+        $category->price = $req->price;
+        $category->qty = $req->qty;
+        $category->description = $req->description;
+        $category->save();
+        return response()->json(["msg"=>"Category updated"]);
+    }
+
+    public function addCategorySubmit(Request $req)
+    {
+        $validator = Validator::make($req->all(),
+            [
+                'name' => 'required',
+                'price' => 'required',
+                'qty' => 'required',
+                'description' => 'required',
+            ],
+            [
+                'name.required' => 'Please provide category name',
+                'price.required' => 'Please provide category price',
+                'qty.required' => 'Please provide the number of bed',
+                'description.required' => 'Please provide category description',
+            ]
+        );
+
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
+
         $category = new Category();
         $category->name = $req->name;
         $category->price = $req->price;
         $category->qty = $req->qty;
         $category->description = $req->description;
         $category->save();
-        return redirect()->route('manager.panel');
+        return response()->json(["msg"=>"Category added"]);
     }
 
-    public function categoryList(Request $req)
+
+
+    public function categoryList()
     {
         $categorylist = Category::all();
-       //return view('/manager/allcategories')->with('categories', $categorylist); 
-       return $categorylist;
+
+        return response()->json($categorylist);
        
     } 
 
-    //  public function addRooms(){
-    //     return view('/manager/addrooms');
-    //  } 
-
-    public function addRooms(Request $req)
+    public function deleteCategory($id)
     {
-        // $this->validate($req,
-        //     [
-        //         'room_no' => 'required',
-        //         'c_id' => 'required',
-                
-        //     ],
-        //     [
-        //         'room_no.required' => 'Please provide room number',
-        //         'c_id.required' => 'Please provide c id',
-                
-        //     ]
-        // );
-
-        $rooms = new Room();
-        $rooms->room_no = $req->room_no;
-        $rooms->c_id = $req->c_id;
-        if($rooms->save()){
-            return response()->json(["msg"=>"Added Successfully"]);
+        $res = Category::where('id', $id)->delete();
+        if($res){
+            return  response()->json(["status"=>200, "msg"=>"Category Deleted"]);
         }
-        return response()->json(["msg"=>"Unsuccessfull"]);
-       // return redirect()->route('manager.panel'); 
+        return  response()->json(["status"=>404, "msg"=>"Not found"]);
+       
     } 
 
 
-
-    public function addRoomsSubmit(Request $req)
+    public function addRooms(Request $req)
     {
-        $this->validate($req,
+        $validator = Validator::make($req->all(),
             [
                 'room_no' => 'required',
                 'c_id' => 'required',
-                
             ],
             [
                 'room_no.required' => 'Please provide room number',
-                'c_id.required' => 'Please provide c id',
-                
+                'c_id.required' => 'Please provide category name'
             ]
         );
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
 
         $rooms = new Room();
         $rooms->room_no = $req->room_no;
         $rooms->c_id = $req->c_id;
         $rooms->save();
-        return redirect()->route('manager.panel');
+
+        return response()->json(["msg"=>"Room added Successfully"]);
     } 
-    
-    public function roomsList(Request $req)
+
+    public function roomsList()
     {
         $roomslist = Room::all();
-       // return view('/manager/allrooms')->with('rooms', $roomslist);
-       return $roomslist;
+        return response()->json($roomslist);
     }  
 
-    // public function addnotice(){
-    //     return view('/manager/addnotice');
-    // } 
-
-
-    public function addNotice(Request $req)
+    public function deleteRoom($id)
     {
-        $this->validate($req,
+        $res = Room::where('id', $id)->delete();
+        if($res){
+            return  response()->json(["status"=>200, "msg"=>"Category Deleted"]);
+        }
+        return  response()->json(["status"=>404, "msg"=>"Not found"]);
+       
+    } 
+
+    public function editRoomInfo($id){
+        $data = Room::where('id', $id)->first();
+        return response()->json($data);
+    }
+
+    public function editRoomSubmit(Request $req)
+    {
+        $validator = Validator::make($req->all(),
             [
-                'notice' => 'required',
-                
-                
+                'room_no' => 'required',
+                'c_id' => 'required',
             ],
             [
-                'notice.required' => 'Please provide notices',
-                
-                
+                'room_no.required' => 'Please provide room number',
+                'c_id.required' => 'Please provide category name'
             ]
         );
 
-        $notice = new Notice();
-        $notice->notice = $req->notice;
-        
-        if($notice->save()){
-            return response()->json(["msg"=>"Added Successfully"]);
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
         }
-        return response()->json(["msg"=>"Unsuccessfull"]);
-        //return redirect()->route('manager.panel');
-    } 
+
+        $data = Room::where('id', $req->id)->first();
+        $data->room_no = $req->room_no;
+        $data->c_id = $req->c_id;
+        $data->save();
+        return response()->json(["msg"=>"Room Updated"]);
+    }
     
 
-    public function addNoticeSubmit(Request $req)
+
+    
+    public function addNotice(Request $req)
     {
-        $this->validate($req,
+        $validator = Validator::make($req->all(),
+            [
+                'notice' => 'required',
+                
+                
+            ],
+            [
+                'notice.required' => 'Please provide notices',
+                
+                
+            ]
+        );
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
+
+        $data = new Notice();
+        $data->notice = $req->notice;
+        $data->save();
+
+        return response()->json(["msg"=>"Room added Successfully"]);
+    } 
+
+    public function noticeList()
+    {
+        $roomslist = Notice::all();
+        return response()->json($roomslist);
+    }  
+
+    public function deleteNotice($id)
+    {
+        $res = Notice::where('id', $id)->delete();
+        if($res){
+            return  response()->json(["status"=>200, "msg"=>"Category Deleted"]);
+        }
+        return  response()->json(["status"=>404, "msg"=>"Not found"]);
+       
+    } 
+
+    public function editNoticeInfo($id){
+        $data = Notice::where('id', $id)->first();
+        return response()->json($data);
+    }
+
+    public function editNoticeSubmit(Request $req)
+    {
+        $validator = Validator::make($req->all(),
             [
                 'notice' => 'required',
                 
@@ -225,11 +275,14 @@ class ManagerController extends Controller
             ]
         );
 
-        $notice = new Notice();
-        $notice->notice = $req->notice;
-        
-        $notice->save();
-        return redirect()->route('manager.panel');
-    } 
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
 
+        $data = Notice::where('id', $req->id)->first();
+        $data->notice = $req->notice;
+        
+        $data->save();
+        return response()->json(["msg"=>"Room Updated"]);
+    }
 }
