@@ -56,7 +56,7 @@
 </tr> -->
 
 <tr>
-<td align="center"> Add Notice</td>
+<td align="center">Add Notice</td>
 <td align="center"><a href ="{{ route('manager.panel.addnotice') }}"><input type="button" value="Add"> </a></td>
 </tr>
 <!--<tr>
